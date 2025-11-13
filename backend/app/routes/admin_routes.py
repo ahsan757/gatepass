@@ -53,25 +53,25 @@ async def pending_gatepasses(db=Depends(get_db)):
     return [serialize_gatepass(d) for d in docs]
 
 
-@router.get("/gatepass/{pass_id}", response_model=GatePassOut)
+@router.get("/gatepass/{pass_number}", response_model=GatePassOut)
 async def get_gatepass_detail(pass_id: str, db=Depends(get_db)):
     """
     Get gatepass details by ID.
     Admin can view any gatepass details.
     """
-    doc = gatepass_service.get_gatepass_by_id(db, pass_id)
+    doc = gatepass_service.get_gatepass_by_number(db, pass_id)
     return serialize_gatepass(doc)
 
 
-@router.post("/gatepass/{pass_id}/approve", response_model=GatePassOut)
-async def approve_gatepass(pass_id: str, db=Depends(get_db)):
-    doc = admin_service.approve_gatepass(db, pass_id, SYSTEM_USER_ID)
+@router.post("/gatepass/{pass_number}/approve", response_model=GatePassOut)
+async def approve_gatepass(pass_number: str, db=Depends(get_db)):
+    doc = admin_service.approve_gatepass(db, pass_number, SYSTEM_USER_ID)
     return serialize_gatepass(doc)
 
 
-@router.post("/gatepass/{pass_id}/reject", response_model=GatePassOut)
-async def reject_gatepass(pass_id: str, db=Depends(get_db)):
-    doc = admin_service.reject_gatepass(db, pass_id, SYSTEM_USER_ID)
+@router.post("/gatepass/{pass_number}/reject", response_model=GatePassOut)
+async def reject_gatepass(pass_number: str, db=Depends(get_db)):
+    doc = admin_service.reject_gatepass(db, pass_number, SYSTEM_USER_ID)
     return serialize_gatepass(doc)
 
 
@@ -84,13 +84,13 @@ async def all_gatepasses(
     return [serialize_gatepass(d) for d in docs]
 
 
-@router.get("/gatepass/{pass_id}/print")
-async def print_gatepass(pass_id: str, db=Depends(get_db)):
+@router.get("/gatepass/{pass_number}/print")
+async def print_gatepass(pass_number: str, db=Depends(get_db)):
     """
     Print gatepass as PDF (with QR code).
     Admin can print approved gatepasses.
     """
-    gp = gatepass_service.get_gatepass_by_id(db, pass_id)
+    gp = gatepass_service.get_gatepass_by_number(db, pass_number)
 
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     filename = f"{gp['number']}.pdf"

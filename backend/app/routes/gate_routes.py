@@ -85,13 +85,13 @@ async def get_gatepass_by_number(pass_number: str, db=Depends(get_db)):
     return serialize_gatepass(doc)
 
 
-@router.get("/gatepass/id/{pass_id}", response_model=GatePassOut)
-async def get_gatepass_by_id(pass_id: str, db=Depends(get_db)):
+@router.get("/gatepass/id/{pass_number}", response_model=GatePassOut)
+async def get_gatepass_by_number(pass_number: str, db=Depends(get_db)):
     """
     Get gatepass details by pass ID.
     Use this endpoint when you have the gatepass ID.
     """
-    doc = gatepass_service.get_gatepass_by_id(db, pass_id)
+    doc = gatepass_service.get_gatepass_by_number(db, pass_number)
     return serialize_gatepass(doc)
 
 

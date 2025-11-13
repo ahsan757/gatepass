@@ -116,9 +116,9 @@ def _append_status_history(doc: Dict[str, Any], new_status: str, user_id: str):
     doc["status_history"] = history
 
 
-def approve_gatepass(db, pass_id: str, admin_user_id: str) -> Dict[str, Any]:
+def approve_gatepass(db, pass_number: str, admin_user_id: str) -> Dict[str, Any]:
     from bson import ObjectId
-    doc = _get_by_id(db, pass_id)
+    doc = _get_by_number(db, pass_number)
     if doc["status"] != "pending":
         raise HTTPException(status_code=400, detail="Only pending passes can be approved")
 
@@ -138,9 +138,9 @@ def approve_gatepass(db, pass_id: str, admin_user_id: str) -> Dict[str, Any]:
     return doc
 
 
-def reject_gatepass(db, pass_id: str, admin_user_id: str) -> Dict[str, Any]:
+def reject_gatepass(db, pass_number: str, admin_user_id: str) -> Dict[str, Any]:
     from bson import ObjectId
-    doc = _get_by_id(db, pass_id)
+    doc = _get_by_number(db, pass_number)
     if doc["status"] != "pending":
         raise HTTPException(status_code=400, detail="Only pending passes can be rejected")
 

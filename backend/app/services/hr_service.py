@@ -13,4 +13,4 @@ def list_hr_gatepasses(db, hr_user_id: str, status: str | None) -> List[Dict[str
 
 
 def get_hr_gatepass_detail(db, pass_id: str) -> Dict[str, Any]:
-    return gatepass_service.get_gatepass_by_id(db, pass_id)
+    return gatepass_service.get_gatepass_by_number(db, pass_id)

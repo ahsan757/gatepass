@@ -11,13 +11,13 @@ router = APIRouter(prefix="/media", tags=["media"])
 
 
 @router.get("/gatepass/{pass_id}/print")
-async def print_gatepass(pass_id: str, db=Depends(get_db)):
+async def print_gatepass(pass_number: str, db=Depends(get_db)):
     """Generate and download a printable PDF for the selected gate pass."""
 
-    gp = gatepass_service.get_gatepass_by_id(db, pass_id)
+    gp = gatepass_service.get_gatepass_by_number(db, pass_number)
     if not gp:
         raise HTTPException(status_code=404, detail="Gate pass not found")
-
+    
     # Ensure media folder exists
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     filename = f"{gp['number']}.pdf"

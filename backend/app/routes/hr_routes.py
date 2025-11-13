@@ -80,9 +80,9 @@ async def get_gatepass_detail(pass_id: str, db=Depends(get_db)):
     return serialize_gatepass(doc)
 
 
-@router.get("/gatepass/{pass_id}/print")
-async def print_gatepass(pass_id: str, db=Depends(get_db)):
-    gp = gatepass_service.get_gatepass_by_id(db, pass_id)
+@router.get("/gatepass/{pass_number}/print")
+async def print_gatepass(pass_number: str, db=Depends(get_db)):
+    gp = gatepass_service.get_gatepass_by_number(db, pass_number)
 
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     filename = f"{gp['number']}.pdf"
