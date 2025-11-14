@@ -1,5 +1,7 @@
 import os
 import qrcode
+from io import BytesIO
+from pathlib import Path
 
 from ..config import settings
 
@@ -11,27 +13,24 @@ def ensure_qr_dir() -> str:
     return qr_dir
 
 
-def generate_qr_for_pass(pass_number: str) -> str:
-    """
-    Generate QR code for a gate pass number.
-    Returns the URL path to access the QR code image.
-    """
+def get_frontend_url():
+    env = os.getenv("ENV", "dev")
+    return os.getenv("PROD_NEXTJS_URL") if env == "prod" else os.getenv("DEV_NEXTJS_URL")
+
+
+def generate_qr_for_pass(gatepass_id: str) -> str:
+    base_url = get_frontend_url()
+    final_url = f"{base_url}/gatepass?gid={gatepass_id}"
+
     qr_dir = ensure_qr_dir()
-    filename = f"{pass_number}.png"
+    
+    # file path
+    filename = f"{gatepass_id}.png"
     file_path = os.path.join(qr_dir, filename)
 
-    # Generate QR code with the pass number
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(pass_number)
-    qr.make(fit=True)
+    # Generate QR and save to file
+    qr = qrcode.make(final_url)
+    qr.save(file_path)
 
-    img = qr.make_image(fill_color="black", back_color="white")
-    img.save(file_path)
-
-    # Return URL path that matches the QR route
-    return f"/qr/{pass_number}"
+    # Return string URL for frontend/media access
+    return f"{base_url}/media/qr/{filename}"

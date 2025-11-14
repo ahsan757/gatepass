@@ -3,11 +3,13 @@ from fastapi.responses import FileResponse
 from reportlab.pdfgen import canvas
 import os
 
+
 from ..config import settings
 from ..database import get_db
 from ..services import gatepass_service
 
 router = APIRouter(prefix="/media", tags=["media"])
+
 
 
 @router.get("/gatepass/{pass_id}/print")
