@@ -82,6 +82,10 @@ async def get_gatepass_detail(pass_id: str, db=Depends(get_db)):
 
 @router.get("/gatepass/{pass_number}/print")
 async def print_gatepass(pass_number: str, db=Depends(get_db)):
+    """
+    Print gatepass as PDF (with QR code).
+    Admin can print approved gatepasses.
+    """
     gp = gatepass_service.get_gatepass_by_number(db, pass_number)
 
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
@@ -97,10 +101,12 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
     c.drawString(100, 740, f"Status: {gp['status']}")
     c.drawString(100, 720, f"Type: {'Returnable' if gp.get('is_returnable') else 'Non-Returnable'}")
     c.drawString(100, 700, f"Created At: {gp['created_at'].strftime('%Y-%m-%d %H:%M:%S')}")
-    
+
     # Add approved_at if available
+    current_y = 680
     if gp.get("approved_at"):
-        c.drawString(100, 680, f"Approved At: {gp['approved_at'].strftime('%Y-%m-%d %H:%M:%S')}")
+        c.drawString(100, current_y, f"Approved At: {gp['approved_at'].strftime('%Y-%m-%d %H:%M:%S')}")
+        current_y -= 40  # extra space before QR
 
     # Include QR code if available (with gap after approved_at)
     if gp.get("qr_code_url"):
@@ -110,11 +116,12 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
         if not os.path.exists(qr_path):
             # Try alternative path format
             qr_path = "." + gp["qr_code_url"] if gp["qr_code_url"].startswith("/") else gp["qr_code_url"]
-        
+
         if os.path.exists(qr_path):
-            # Add gap between approved_at and QR image (position QR code lower)
-            c.drawImage(qr_path, 100, 560, width=150, height=150)
-            c.drawString(100, 540, "Scan QR code at gate")
+            # Draw QR code lower to create space
+            qr_y = current_y - 150  # QR height
+            c.drawImage(qr_path, 100, qr_y, width=150, height=150)
+            c.drawString(100, qr_y - 20, "Scan QR code at gate")
 
     c.showPage()
     c.save()
