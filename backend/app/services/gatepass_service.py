@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from uuid import uuid4
+import pytz
 
 from fastapi import HTTPException
 from bson import ObjectId
@@ -9,9 +10,18 @@ from ..utils.generate_qr import generate_qr_for_pass
 from ..schemas.gatepass import GatePassCreate, GatePassFilter
 
 
+# Pakistan timezone
+PKT = pytz.timezone('Asia/Karachi')
+
+
 # -----------------------------
 # Helpers
 # -----------------------------
+
+def _get_pk_time():
+    """Get current time in Pakistan timezone."""
+    return datetime.now(PKT)
+
 
 def _normalize_id(doc: Dict[str, Any]):
     """Ensure _id is always a string for API responses."""
@@ -21,7 +31,7 @@ def _normalize_id(doc: Dict[str, Any]):
 
 
 def _new_gatepass_number(db):
-    year = datetime.utcnow().year
+    year = _get_pk_time().year
     count = db["gatepasses"].count_documents({"year": year}) + 1
     return f"GP-{year}-{count:04d}"
 
@@ -37,7 +47,7 @@ def _find_gatepass(db, query: Dict[str, Any]):
 def _append_status_history(doc: Dict[str, Any], new_status: str, user_id: str):
     doc.setdefault("status_history", []).append({
         "status": new_status,
-        "changed_at": datetime.utcnow(),
+        "changed_at": _get_pk_time(),
         "changed_by": user_id,
     })
 
@@ -58,7 +68,7 @@ def _update_doc(db, doc: Dict[str, Any]):
 
 def create_gatepass(db, hr_user_id: str, payload: GatePassCreate) -> Dict[str, Any]:
     number = _new_gatepass_number(db)
-    now = datetime.utcnow()
+    now = _get_pk_time()
 
     doc = {
         "_id": uuid4().hex,  # Always store _id as string. Avoid mixing ObjectId and strings.
@@ -129,7 +139,7 @@ def approve_gatepass(db, pass_number: str, admin_user_id: str):
         raise HTTPException(status_code=400, detail="Only pending passes can be approved")
 
     doc["status"] = "approved"
-    doc["approved_at"] = datetime.utcnow()
+    doc["approved_at"] = _get_pk_time()
 
     _append_status_history(doc, "approved", admin_user_id)
     return _update_doc(db, doc)
@@ -153,7 +163,7 @@ def update_on_exit(db, pass_number: str, photo_id: Optional[str], gate_user_id: 
     if doc["status"] != "approved":
         raise HTTPException(status_code=400, detail="Only approved passes can be used for exit")
 
-    now = datetime.utcnow()
+    now = _get_pk_time()
     doc["exit_time"] = now
     if photo_id:
         doc["exit_photo_id"] = photo_id
@@ -172,7 +182,7 @@ def update_on_return(db, pass_number: str, photo_id: Optional[str], gate_user_id
     if doc["status"] != "pending_return":
         raise HTTPException(status_code=400, detail="Return only allowed for pending_return")
 
-    now = datetime.utcnow()
+    now = _get_pk_time()
     doc["return_time"] = now
     if photo_id:
         doc["return_photo_id"] = photo_id

@@ -1,6 +1,16 @@
 from datetime import datetime
 from uuid import uuid4
 from typing import List, Dict, Any
+import pytz
+
+
+# Pakistan timezone
+PKT = pytz.timezone('Asia/Karachi')
+
+
+def _get_pk_time():
+    """Get current time in Pakistan timezone."""
+    return datetime.now(PKT)
 
 
 def create_notification(db, user_id: str, title: str, message: str, gatepass_id: str) -> Dict[str, Any]:
@@ -12,7 +22,7 @@ def create_notification(db, user_id: str, title: str, message: str, gatepass_id:
         "message": message,
         "gatepass_id": gatepass_id,
         "is_read": False,
-        "created_at": datetime.utcnow(),
+        "created_at": _get_pk_time(),
     }
     db["notifications"].insert_one(doc)
     # MongoDB adds _id field, convert to string if it's ObjectId

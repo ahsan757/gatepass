@@ -1,9 +1,13 @@
 from typing import Optional, Dict, Any
 from fastapi import UploadFile, HTTPException
 from datetime import datetime
+from pytz import timezone
 
 from ..utils.photo_upload import save_photo_file
 from . import gatepass_service
+
+# Pakistan Standard Time
+PKT = timezone('Asia/Karachi')
 
 
 async def process_exit_scan(db, pass_number: str, file: UploadFile, gate_user_id: str) -> Dict[str, Any]:
@@ -40,7 +44,7 @@ async def process_exit_scan(db, pass_number: str, file: UploadFile, gate_user_id
         "gatepass_id": gatepass_id,
         "file_url": f"/media/photo/{filename}",
         "type": "exit",
-        "captured_at": datetime.utcnow(),
+        "captured_at": datetime.now(PKT),
         "captured_by": gate_user_id,
         "pass_number": pass_number,  # Store pass number for easy reference
     }
@@ -99,7 +103,7 @@ async def process_return_scan(db, pass_number: str, file: UploadFile, gate_user_
         "gatepass_id": gatepass_id,
         "file_url": f"/media/photo/{filename}",
         "type": "return",
-        "captured_at": datetime.utcnow(),
+        "captured_at": datetime.now(PKT),
         "captured_by": gate_user_id,
         "pass_number": pass_number,  # Store pass number for easy reference
     }
@@ -116,4 +120,3 @@ async def process_return_scan(db, pass_number: str, file: UploadFile, gate_user_
 
     # Update gatepass status using pass number
     return gatepass_service.update_on_return(db, pass_number, photo_id, gate_user_id)
-

@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import pytz
 
 from fastapi import APIRouter, UploadFile, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -11,6 +12,15 @@ from ..config import settings
 router = APIRouter(prefix="/media", tags=["media"])
 
 
+# Pakistan timezone
+PKT = pytz.timezone('Asia/Karachi')
+
+
+def _get_pk_time():
+    """Get current time in Pakistan timezone."""
+    return datetime.now(PKT)
+
+
 @router.post("/upload-photo")
 async def upload_photo(file: UploadFile, db=Depends(get_db)):
     from bson import ObjectId
@@ -20,7 +30,7 @@ async def upload_photo(file: UploadFile, db=Depends(get_db)):
         "gatepass_id": None,
         "file_url": f"/media/photo/{filename}",
         "type": "generic",
-        "captured_at": datetime.utcnow(),
+        "captured_at": _get_pk_time(),
         "captured_by": None,
     }
     db["photos"].insert_one(record)
