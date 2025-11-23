@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     MEDIA_ROOT: str = os.getenv("MEDIA_ROOT", "media")
     PHOTO_DIR: str = "photos"
     QR_DIR: str = "qr"
+    LOGO_PATH: str = os.getenv("LOGO_PATH", r"D:\gatepass\backend\media\logo.png")  # Path to company logo
     ENV: str = os.getenv("ENV", "dev")
     DEV_NEXTJS_URL: str = os.getenv("DEV_NEXTJS_URL", "http://localhost:3000")
     PROD_NEXTJS_URL: str = os.getenv("PROD_NEXTJS_URL", "")
