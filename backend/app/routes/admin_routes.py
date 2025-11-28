@@ -7,7 +7,7 @@ import pytz
 
 from ..database import get_db
 from ..schemas.gatepass import GatePassOut, StatusHistoryItem
-from ..services import admin_service, gatepass_service
+from ..services import admin_service, gatepass_service,whatsapp_message
 from ..config import settings
 
 # Pakistan timezone
@@ -70,12 +70,14 @@ async def get_gatepass_detail(pass_id: str, db=Depends(get_db)):
 @router.post("/gatepass/{pass_number}/approve", response_model=GatePassOut)
 async def approve_gatepass(pass_number: str, db=Depends(get_db)):
     doc = admin_service.approve_gatepass(db, pass_number, SYSTEM_USER_ID)
+    whatsapp_message.send_whatsapp_messages(f"Alert: Gate pass {pass_number} approved by admin")
     return serialize_gatepass(doc)
 
 
 @router.post("/gatepass/{pass_number}/reject", response_model=GatePassOut)
 async def reject_gatepass(pass_number: str, db=Depends(get_db)):
     doc = admin_service.reject_gatepass(db, pass_number, SYSTEM_USER_ID)
+    whatsapp_message.send_whatsapp_messages(f"Alert: Gate pass {pass_number} Rejected by admin")
     return serialize_gatepass(doc)
 
 
@@ -97,11 +99,13 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
     import pytz
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
+    from reportlab.lib.utils import simpleSplit
     from fastapi import HTTPException
     from fastapi.responses import FileResponse
 
     PKT = pytz.timezone("Asia/Karachi")
     PAGE_WIDTH, PAGE_HEIGHT = letter
+    BOTTOM_MARGIN = 50  # Minimum space from bottom of page
 
     gp = gatepass_service.get_gatepass_by_number(db, pass_number)
 
@@ -123,6 +127,13 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
         file_path = os.path.join(settings.MEDIA_ROOT, filename)
 
         c = canvas.Canvas(file_path, pagesize=letter)
+
+        # Helper function to check if we need a new page
+        def check_new_page(current_y, required_space):
+            if current_y - required_space < BOTTOM_MARGIN:
+                c.showPage()
+                return PAGE_HEIGHT - 50  # Start from top with margin
+            return current_y
 
         # ----------------------------------------------------------
         # Load and Draw Logo
@@ -160,15 +171,31 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
         c.setFont("Helvetica", 12)
         current_y = start_y - 25
 
+        current_y = check_new_page(current_y, 20)
+        c.setFont("Helvetica", 12)
         c.drawString(100, current_y, f"Name: {gp['person_name']}")
         current_y -= 20
 
-        c.drawString(100, current_y, f"Description: {gp['description']}")
-        current_y -= 20
+        # Handle long description with text wrapping
+        description_text = f"Description: {gp['description']}"
+        max_width = PAGE_WIDTH - 200  # Leave margins on both sides
+        
+        # Split the description into multiple lines if needed
+        description_lines = simpleSplit(description_text, "Helvetica", 12, max_width)
+        
+        for line in description_lines:
+            current_y = check_new_page(current_y, 20)
+            c.setFont("Helvetica", 12)
+            c.drawString(100, current_y, line)
+            current_y -= 20
 
+        current_y = check_new_page(current_y, 20)
+        c.setFont("Helvetica", 12)
         c.drawString(100, current_y, f"Status: {gp['status']}")
         current_y -= 20
 
+        current_y = check_new_page(current_y, 20)
+        c.setFont("Helvetica", 12)
         c.drawString(100, current_y, f"Type: {'Returnable' if gp.get('is_returnable') else 'Non-Returnable'}")
 
         # ----------------------------------------------------------
@@ -184,10 +211,14 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
             return dt.strftime('%Y-%m-%d %H:%M:%S') + ' PKT'
 
         current_y -= 20
+        current_y = check_new_page(current_y, 20)
+        c.setFont("Helvetica", 12)
         c.drawString(100, current_y, f"Created At: {format_pkt_time(gp.get('created_at'))}")
         current_y -= 20
 
         if gp.get("approved_at"):
+            current_y = check_new_page(current_y, 40)
+            c.setFont("Helvetica", 12)
             c.drawString(100, current_y, f"Approved At: {format_pkt_time(gp.get('approved_at'))}")
             current_y -= 40
 
@@ -201,13 +232,15 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
                 qr_path = "." + gp["qr_code_url"] if gp["qr_code_url"].startswith("/") else gp["qr_code_url"]
 
             if os.path.exists(qr_path):
+                current_y = check_new_page(current_y, 170)  # QR code + label space
                 qr_y = current_y - 150
                 c.drawImage(qr_path, 100, qr_y, width=150, height=150)
+                c.setFont("Helvetica", 12)
                 c.drawString(100, qr_y - 20, "Scan QR code at gate")
                 current_y = qr_y - 40
 
         # ----------------------------------------------------------
-        # Exit + Return Photos (SIDE BY SIDE)
+        # Exit + Return Photos (SIDE BY SIDE) - Only if photos exist
         # ----------------------------------------------------------
         exit_photo_id = gp.get("exit_photo_id")
         return_photo_id = gp.get("return_photo_id")
@@ -225,39 +258,53 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
             if os.path.exists(rp):
                 return_photo_path = rp
 
-        # Titles
-        current_y -= 30
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(100, current_y, "Exit Photo")
-        c.drawString(350, current_y, "Return Photo")
-        current_y -= 10
+        # Only show photo section if at least one photo exists
+        if exit_photo_path or return_photo_path:
+            photo_w = 180
+            photo_h = 150
+            
+            # Check if we need new page for photos (title + photo + timestamp)
+            required_space = 30 + photo_h + 40
+            current_y = check_new_page(current_y, required_space)
+            
+            current_y -= 30
+            c.setFont("Helvetica-Bold", 12)
+            
+            # Show titles only for photos that exist
+            if exit_photo_path:
+                c.drawString(100, current_y, "Exit Photo")
+            if return_photo_path:
+                c.drawString(350, current_y, "Return Photo")
+            
+            current_y -= 10
 
-        photo_w = 180
-        photo_h = 150
+            # Exit Photo
+            if exit_photo_path:
+                try:
+                    c.drawImage(exit_photo_path, 100, current_y - photo_h, width=photo_w, height=photo_h)
+                    ts = format_pkt_time(gp.get("exit_time"))
+                    if ts:
+                        c.setFont("Helvetica", 8)
+                        c.drawString(100, current_y - photo_h - 12, f"Captured: {ts}")
+                        c.setFont("Helvetica-Bold", 12)  # Reset font for next section
+                except Exception as e:
+                    c.setFont("Helvetica", 10)
+                    c.drawString(100, current_y - 12, f"Photo error: {str(e)[:50]}")
+                    c.setFont("Helvetica-Bold", 12)
 
-        # Exit Photo
-        if exit_photo_path:
-            try:
-                c.drawImage(exit_photo_path, 100, current_y - photo_h, width=photo_w, height=photo_h)
-                ts = format_pkt_time(gp.get("exit_time"))
-                if ts:
-                    c.setFont("Helvetica", 8)
-                    c.drawString(100, current_y - photo_h - 12, f"Captured: {ts}")
-            except Exception as e:
-                c.drawString(100, current_y - 12, f"Photo error: {str(e)[:50]}")
+            # Return Photo
+            if return_photo_path:
+                try:
+                    c.drawImage(return_photo_path, 350, current_y - photo_h, width=photo_w, height=photo_h)
+                    ts = format_pkt_time(gp.get("return_time"))
+                    if ts:
+                        c.setFont("Helvetica", 8)
+                        c.drawString(350, current_y - photo_h - 12, f"Captured: {ts}")
+                except Exception as e:
+                    c.setFont("Helvetica", 10)
+                    c.drawString(350, current_y - 12, f"Photo error: {str(e)[:50]}")
 
-        # Return Photo
-        if return_photo_path:
-            try:
-                c.drawImage(return_photo_path, 350, current_y - photo_h, width=photo_w, height=photo_h)
-                ts = format_pkt_time(gp.get("return_time"))
-                if ts:
-                    c.setFont("Helvetica", 8)
-                    c.drawString(350, current_y - photo_h - 12, f"Captured: {ts}")
-            except Exception as e:
-                c.drawString(350, current_y - 12, f"Photo error: {str(e)[:50]}")
-
-        current_y -= (photo_h + 40)
+            current_y -= (photo_h + 40)
 
         # ----------------------------------------------------------
         # End PDF
@@ -275,4 +322,3 @@ async def print_gatepass(pass_number: str, db=Depends(get_db)):
             status_code=500,
             detail=f"Failed to generate PDF: {str(e)}"
         )
-
