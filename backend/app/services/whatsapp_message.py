@@ -5,9 +5,15 @@ access_token = "EAATJDPXxzGEBQAT8zVqipZCahHCaXHblug3bTbPZB232JFcdMfcNPXspfObbzA5
 
 def send_whatsapp_messages(message):
     recipients = [
-        "923322590048",
-        "923001112223",
-        "923004445556"
+        "923193347800",
+        "923462695471",
+        "923145040874",
+        "923213772697",
+        "923219251210",
+        "923022299687",
+        "+923219282273",
+        "923192209991",
+        "923322590048"
     ]
     
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"

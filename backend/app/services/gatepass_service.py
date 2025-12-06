@@ -157,6 +157,18 @@ def reject_gatepass(db, pass_number: str, admin_user_id: str):
     return _update_doc(db, doc)
 
 
+def delete_gatepass(db, pass_number: str, admin_user_id: str):
+    doc = get_gatepass_by_number(db, pass_number)
+
+    if doc["status"] == "deleted":
+        raise HTTPException(status_code=400, detail="Gate pass is already deleted")
+
+    doc["status"] = "deleted"
+    _append_status_history(doc, "deleted", admin_user_id)
+
+    return _update_doc(db, doc)
+
+
 def update_on_exit(db, pass_number: str, photo_id: Optional[str], gate_user_id: str):
     doc = get_gatepass_by_number(db, pass_number)
 

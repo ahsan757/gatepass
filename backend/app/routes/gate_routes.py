@@ -55,7 +55,6 @@ async def scan_exit(
     - Updates gatepass status to 'pending_return' (if returnable) or 'completed' (if not)
     """
     doc = await gate_service.process_exit_scan(db, pass_number, file, SYSTEM_USER_ID)
-    whatsapp_message.send_whatsapp_messages(f"Alert:Gate pass {pass_number} approved item exiting")
     return serialize_gatepass(doc)
 
 
@@ -73,7 +72,6 @@ async def scan_return(
     - Updates gatepass status to 'returned'
     """
     doc = await gate_service.process_return_scan(db, pass_number, file, SYSTEM_USER_ID)
-    whatsapp_message.send_whatsapp_messages(f"Alert:Gate pass {pass_number} item returned")
     return serialize_gatepass(doc)
 
 

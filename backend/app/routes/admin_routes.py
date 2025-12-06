@@ -15,9 +15,6 @@ PKT = pytz.timezone('Asia/Karachi')
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-# Default system user ID (no authentication required)
-SYSTEM_USER_ID = "system"
-
 
 def serialize_gatepass(doc) -> GatePassOut:
     # Convert ObjectId to string for JSON serialization
@@ -68,16 +65,34 @@ async def get_gatepass_detail(pass_id: str, db=Depends(get_db)):
 
 
 @router.post("/gatepass/{pass_number}/approve", response_model=GatePassOut)
-async def approve_gatepass(pass_number: str, db=Depends(get_db)):
-    doc = admin_service.approve_gatepass(db, pass_number, SYSTEM_USER_ID)
-    whatsapp_message.send_whatsapp_messages(f"Alert: Gate pass {pass_number} approved by admin")
+async def approve_gatepass(pass_number: str, name: str, db=Depends(get_db)):
+    """
+    Approve gatepass by admin.
+    Requires name parameter to track who approved the gatepass.
+    """
+    doc = admin_service.approve_gatepass(db, pass_number, name)
+    whatsapp_message.send_whatsapp_messages(f"Alert: Gate pass {pass_number} approved by {name}")
     return serialize_gatepass(doc)
 
 
 @router.post("/gatepass/{pass_number}/reject", response_model=GatePassOut)
-async def reject_gatepass(pass_number: str, db=Depends(get_db)):
-    doc = admin_service.reject_gatepass(db, pass_number, SYSTEM_USER_ID)
-    whatsapp_message.send_whatsapp_messages(f"Alert: Gate pass {pass_number} Rejected by admin")
+async def reject_gatepass(pass_number: str, name: str, db=Depends(get_db)):
+    """
+    Reject gatepass by admin.
+    Requires name parameter to track who rejected the gatepass.
+    """
+    doc = admin_service.reject_gatepass(db, pass_number, name)
+    return serialize_gatepass(doc)
+
+
+@router.post("/gatepass/{pass_number}/delete", response_model=GatePassOut)
+async def delete_gatepass(pass_number: str, name: str, db=Depends(get_db)):
+    """
+    Delete gatepass by changing its status to deleted.
+    Admin can delete any gatepass.
+    Requires name parameter to track who deleted the gatepass.
+    """
+    doc = admin_service.delete_gatepass(db, pass_number, name)
     return serialize_gatepass(doc)
 
 

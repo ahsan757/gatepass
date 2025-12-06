@@ -35,6 +35,19 @@ def reject_gatepass(db, pass_id: str, admin_user_id: str) -> Dict[str, Any]:
     return doc
 
 
+def delete_gatepass(db, pass_id: str, admin_user_id: str) -> Dict[str, Any]:
+    doc = gatepass_service.delete_gatepass(db, pass_id, admin_user_id)
+    # Notify HR that gatepass has been deleted
+    notification_service.create_notification(
+        db=db,
+        user_id="hr",  # HR user identifier
+        title="Gate pass deleted",
+        message=f"Gate pass {doc['number']} has been deleted",
+        gatepass_id=doc["_id"],
+    )
+    return doc
+
+
 def list_all_gatepasses(db, status: str | None) -> List[Dict[str, Any]]:
     filter_obj = GatePassFilter(status=status)
     return gatepass_service.list_gatepasses(db, filter_obj)

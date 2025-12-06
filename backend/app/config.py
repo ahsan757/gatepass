@@ -1,11 +1,13 @@
 import os
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 load_dotenv()  # IMPORTANT!
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     APP_NAME: str = "Gate Pass Management API"
 
     MONGO_URI: str = os.getenv(
@@ -23,9 +25,6 @@ class Settings(BaseSettings):
     PROD_NEXTJS_URL: str = os.getenv("PROD_NEXTJS_URL", "")
     DEV_BACKEND_URL: str = os.getenv("DEV_BACKEND_URL", "http://localhost:8000")
     PROD_BACKEND_URL: str = os.getenv("PROD_BACKEND_URL", "")
-
-    class Config:
-        env_file = ".env"
 
 
 settings = Settings()
