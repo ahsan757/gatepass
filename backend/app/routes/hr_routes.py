@@ -58,6 +58,7 @@ async def create_gatepass(payload: GatePassCreate, db=Depends(get_db)):
     # Create notification for admin (using system user ID since we don't have user auth)
     # In a real system, you would notify all admin users
     # For now, we'll create a notification that can be retrieved by admin role
+    whatsapp_message.send_whatsapp_messages(f"Alert: New GatePass {doc['number']} created , please check the website for more information",f"{doc['number']}")
     notification_service.create_notification(
         db=db,
         user_id="admin",  # Admin user identifier

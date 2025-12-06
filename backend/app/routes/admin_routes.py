@@ -71,7 +71,6 @@ async def approve_gatepass(pass_number: str, name: str, db=Depends(get_db)):
     Requires name parameter to track who approved the gatepass.
     """
     doc = admin_service.approve_gatepass(db, pass_number, name)
-    whatsapp_message.send_whatsapp_messages(f"Alert: Gate pass {pass_number} approved by {name}")
     return serialize_gatepass(doc)
 
 
