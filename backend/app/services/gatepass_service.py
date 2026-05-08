@@ -124,7 +124,7 @@ def list_gatepasses(db, filter_obj: Optional[GatePassFilter] = None):
         if filter_obj.created_by:
             query["created_by"] = filter_obj.created_by
 
-    docs = list(db["gatepasses"].find(query).sort("created_at", -1))
+    docs = list(db["gatepasses"].find(query).sort("created_at", -1).limit(200))
     return [_normalize_id(doc) for doc in docs]
 
 
